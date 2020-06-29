@@ -1,27 +1,37 @@
 package repository.io;
 
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import model.Skill;
 import repository.SkillRepository;
 
 import java.io.*;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.IntStream;
 
 public class JavaIOSkillRepositoryImpl implements SkillRepository {
     private final String REPOSITORY_PATH = "src\\main\\resources\\skills.txt";
-    private Skill[] skills = null;
-    //private long currentMaxID = getAll().get(getAll().size() - 1).getId();
+    private Long currentMaxID = 0L;
+
+    public void generateCurrentMaxID() {
+        if (!getAll().isEmpty()) {
+            currentMaxID = getAll().get(getAll().size() - 1).getId();
+        }
+    }
 
     public Skill create(Skill skill) {
-        //String jsonSkill = new Gson().toJson(skill);
-        List<Skill> skillsList = getAll();
+        List<Skill> skillsList = new ArrayList<>(getAll());
+        //generateCurrentMaxID();
+        if (!getAll().isEmpty()) {
+            currentMaxID = getAll().get(getAll().size() - 1).getId() + 1;
+        }
+        skill.setId(currentMaxID);
         skillsList.add(skill);
 
         try(BufferedWriter bw = new BufferedWriter(new FileWriter(
                 REPOSITORY_PATH))) {
             new Gson().toJson(skillsList, bw);
-            //bw.write(jsonSkill);
         } catch (IOException e) {
             System.out.println("IOException");
         }
@@ -29,62 +39,59 @@ public class JavaIOSkillRepositoryImpl implements SkillRepository {
     }
 
     public Skill read(Long aLong) {
-        skills = getSkillArray();
-
-        for (int i = 0; i < skills.length; i++) {
-            if (skills[i].getId() == aLong) {
-                return skills[i];
-            }
-        }
-        return null;
-
-        /*
-        String jsonString = "";
-        try(BufferedReader br = new BufferedReader(new FileReader(
-                "src\\main\\resources\\skills.txt"))) {
-            jsonString = br.readLine();
-        } catch (IOException e) {
-            System.out.println("IOException");
-        }
-        String[] objectsArray = jsonString.split("\\{");
-        for (String s : objectsArray) {
-            if (s.contains(aLong.toString())) {
-                return new Gson().fromJson("{" + s, Skill.class);
-            }
-        }
-        return null;
-        */
+        return getAll().stream()
+                .filter(n -> n.getId() == aLong)
+                .findFirst()
+                .orElse(null);
     }
 
     public Skill update(Long aLong, Skill skill) {
-        skills = getSkillArray();
+        List<Skill> skillsList = getAll();
 
-        for (int i = 0; i < skills.length; i++) {
-            if (skills[i].getId() == aLong) {
-                skills[i] = skill;
-                skills[i].setId(aLong);
-                return skills[i];
+        if(skillsList.stream().anyMatch(n -> n.getId() == aLong)) {
+            skillsList.stream()
+                    .filter(n -> n.getId() == aLong)
+                    .forEach(n -> n.setName(skill.getName()));
+
+            try(BufferedWriter bw = new BufferedWriter(new FileWriter(
+                    REPOSITORY_PATH))) {
+                new Gson().toJson(skillsList, bw);
+            } catch (IOException e) {
+                System.out.println("IOException");
             }
+            return skill;
+        } else {
+            return null;
         }
-        return null;
     }
 
     public void delete(Long aLong) {
-        List<Skill> skillsList = getAll();
-        for (int i = 0; i < skillsList.size(); i++) {
-            if (skillsList.get(i).getId() == aLong)
-                skillsList.remove(i);
+        List<Skill> skillsList = new ArrayList<>(getAll());
+
+        int index = IntStream.range(0, skillsList.size())
+                .filter(i -> aLong.intValue() == skillsList.get(i).getId())
+                .findFirst()
+                .orElse(-1);
+        skillsList.remove(skillsList.get(index));
+
+        try(BufferedWriter bw = new BufferedWriter(new FileWriter(
+                REPOSITORY_PATH))) {
+            new Gson().toJson(skillsList, bw);
+        } catch (IOException e) {
+            System.out.println("IOException");
         }
     }
 
     public List<Skill> getAll() {
-        return Arrays.asList(getSkillArray());
-    }
+        List<Skill> skills = null;
 
-    private Skill[] getSkillArray() {
         try(BufferedReader br = new BufferedReader(new FileReader(
                 REPOSITORY_PATH))) {
-            skills = new Gson().fromJson(br, Skill[].class);
+            skills = new Gson().fromJson(
+                    br, new TypeToken<List<Skill>>(){}.getType());
+            if (skills== null) {
+                skills = new ArrayList<>();
+            }
         } catch (IOException e) {
             System.out.println("IOException");
         }
