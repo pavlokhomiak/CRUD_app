@@ -2,6 +2,8 @@ package repository.io;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import lombok.extern.flogger.Flogger;
+import lombok.extern.slf4j.Slf4j;
 import model.Skill;
 import repository.SkillRepository;
 
@@ -10,22 +12,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
 
+
 public class JavaIOSkillRepositoryImpl implements SkillRepository {
     private final String REPOSITORY_PATH = "src\\main\\resources\\skills.txt";
     private Long currentMaxID = 0L;
 
-    public void generateCurrentMaxID() {
+    private void generateCurrentMaxID() {
         if (!getAll().isEmpty()) {
-            currentMaxID = getAll().get(getAll().size() - 1).getId();
+            currentMaxID = getAll().get(getAll().size() - 1).getId() + 1;
         }
     }
 
     public Skill create(Skill skill) {
         List<Skill> skillsList = new ArrayList<>(getAll());
-        //generateCurrentMaxID();
-        if (!getAll().isEmpty()) {
-            currentMaxID = getAll().get(getAll().size() - 1).getId() + 1;
-        }
+        generateCurrentMaxID();
         skill.setId(currentMaxID);
         skillsList.add(skill);
 
@@ -40,7 +40,7 @@ public class JavaIOSkillRepositoryImpl implements SkillRepository {
 
     public Skill read(Long aLong) {
         return getAll().stream()
-                .filter(n -> n.getId() == aLong)
+                .filter(n -> n.getId().equals(aLong))
                 .findFirst()
                 .orElse(null);
     }
@@ -48,16 +48,16 @@ public class JavaIOSkillRepositoryImpl implements SkillRepository {
     public Skill update(Long aLong, Skill skill) {
         List<Skill> skillsList = getAll();
 
-        if(skillsList.stream().anyMatch(n -> n.getId() == aLong)) {
+        if(skillsList.stream().anyMatch(n -> n.getId().equals(aLong))) {
             skillsList.stream()
-                    .filter(n -> n.getId() == aLong)
+                    .filter(n -> n.getId().equals(aLong))
                     .forEach(n -> n.setName(skill.getName()));
 
             try(BufferedWriter bw = new BufferedWriter(new FileWriter(
                     REPOSITORY_PATH))) {
                 new Gson().toJson(skillsList, bw);
             } catch (IOException e) {
-                System.out.println("IOException");
+                System.out.println("Exception");
             }
             return skill;
         } else {

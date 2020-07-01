@@ -1,0 +1,1 @@
+{"id":0,"name":"foo","account":{"id":0,"accountStatus":"ACTIVE"},"skills":[{"id":0,"name":"Fun"}]}
